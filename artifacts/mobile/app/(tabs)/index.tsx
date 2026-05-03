@@ -187,10 +187,6 @@ export default function HomeScreen() {
       if (habit.targetValue != null) return (comp.value ?? 0) >= habit.targetValue;
       return false;
     }
-    if (habit.type === "timed") {
-      if (habit.targetDuration != null) return (comp.duration ?? 0) >= habit.targetDuration;
-      return false;
-    }
     return comp.completed;
   }, []);
 
@@ -358,7 +354,11 @@ export default function HomeScreen() {
       uncompleteHabit(habit.id);
     } else {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      completeHabit(habit.id);
+      const duration =
+        habit.type === "timed" && habit.targetDuration != null
+          ? habit.targetDuration
+          : undefined;
+      completeHabit(habit.id, undefined, duration);
     }
   }, [completeHabit, uncompleteHabit, getTodayCompletion, isToday]);
 
