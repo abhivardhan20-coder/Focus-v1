@@ -115,6 +115,7 @@ export default function HomeScreen() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const streakAlertQueuedRef = useRef(false);
+  const difficultyNudgesQueuedRef = useRef<Set<string>>(new Set());
   const prevCompletedRef = useRef(0);
 
   const todaySteps = stepsByDate[todayStr] ?? 0;
@@ -403,6 +404,31 @@ export default function HomeScreen() {
     setAlertDismissed(false);
     streakAlertQueuedRef.current = true;
   }, [atRiskHabits.length, isToday, userStats.freezeTokens]);
+
+  useEffect(() => {
+    if (!isToday || difficultyNudges.length === 0) return;
+    const ts = Date.now();
+    const newNotifs: NotificationItem[] = [];
+    for (const nudge of difficultyNudges) {
+      if (difficultyNudgesQueuedRef.current.has(nudge.habit.id)) continue;
+      difficultyNudgesQueuedRef.current.add(nudge.habit.id);
+      newNotifs.push({
+        id: `nudge-${nudge.habit.id}-${ts}`,
+        kind: "difficultyNudge",
+        habitId: nudge.habit.id,
+        habitName: nudge.habit.name,
+        type: nudge.type,
+        rate: nudge.rate,
+        currentDifficulty: nudge.habit.difficulty,
+        newDifficulty: nudge.type === "upgrade" ? "hard" : "medium",
+        timestamp: ts,
+      });
+    }
+    if (newNotifs.length > 0) {
+      setNotifications((prev) => [...newNotifs, ...prev]);
+      setUnreadCount((n) => n + newNotifs.length);
+    }
+  }, [difficultyNudges.length, isToday]);
 
   const handleOpenNotif = useCallback(() => {
     setNotifPanelOpen(true);
@@ -870,22 +896,24 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* ── DIFFICULTY NUDGE CARDS ── */}
-        {difficultyNudges.length > 0 && (
+        {/* ── DIFFICULTY NUDGE CARDS ── (hidden after first show, visible in notifications panel) */}
+        {difficultyNudges.length > 0 && Array.from(difficultyNudgesQueuedRef.current).length < difficultyNudges.length && (
           <View style={{ paddingHorizontal: 16, gap: 8 }}>
-            {difficultyNudges.slice(0, 2).map(({ habit, type, rate }) => (
-              <DifficultyNudgeCard
-                key={habit.id}
-                habit={habit}
-                type={type}
-                rate={rate}
-                onDismiss={() => setDismissedNudges(prev => [...prev, habit.id])}
-                onAccept={() => {
-                  updateHabit(habit.id, { difficulty: type === "upgrade" ? "hard" : "medium" });
-                  setDismissedNudges(prev => [...prev, habit.id]);
-                }}
-              />
-            ))}
+            {difficultyNudges.slice(0, 2).map(({ habit, type, rate }) => 
+              !difficultyNudgesQueuedRef.current.has(habit.id) && (
+                <DifficultyNudgeCard
+                  key={habit.id}
+                  habit={habit}
+                  type={type}
+                  rate={rate}
+                  onDismiss={() => setDismissedNudges(prev => [...prev, habit.id])}
+                  onAccept={() => {
+                    updateHabit(habit.id, { difficulty: type === "upgrade" ? "hard" : "medium" });
+                    setDismissedNudges(prev => [...prev, habit.id]);
+                  }}
+                />
+              )
+            )}
           </View>
         )}
 
