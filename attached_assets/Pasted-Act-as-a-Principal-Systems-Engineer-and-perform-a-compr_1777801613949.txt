@@ -1,0 +1,38 @@
+Act as a Principal Systems Engineer and perform a comprehensive, phased diagnostic audit of this entire monorepo codebase (FOCUS app and backend workspace). 
+
+My goal is to identify hidden bugs, performance bottlenecks, race conditions, memory leaks, and architectural flaws. Do not immediately rewrite my code. Instead, analyze the system phase-by-phase, report your findings, and ask for my permission to implement the fixes.
+
+Here is the context of the stack:
+- Monorepo: pnpm workspaces (Node 24, TS 5.9)
+- Backend: Express 5, PostgreSQL + Drizzle ORM, Zod, Orval API codegen
+- Mobile: Expo ~54, React Native 0.81, expo-router, react-native-reanimated ~4, AsyncStorage
+
+Please execute the following 5-Phase Audit. Read the relevant files for each phase before reporting back.
+
+### Phase 1: Type Safety & Boundary Analysis (The Monorepo Layer)
+1. Cross-reference the Zod schemas (`@workspace/api-spec`) against the Drizzle ORM schemas (`@workspace/db`). Are there any missing validations or type desyncs?
+2. Check the Orval generated hooks used in the Expo app. Are we passing any `undefined` or incorrectly typed data from the UI into the API layer?
+3. Run a mental typecheck: Are there any implicit `any` types or unsafe type assertions (`as unknown as Type`) hiding potential crashes?
+
+### Phase 2: Mobile State & Persistence Integrity (`artifacts/mobile/context`)
+1. Analyze `HabitsContext.tsx` and the `AsyncStorage` implementation (Key: `@focus_habits_v3`). 
+2. Look for Race Conditions: Are there any scenarios where `AsyncStorage.setItem` is called concurrently, potentially overwriting data (e.g., rapidly checking off habits while the Pomodoro timer is saving a session)?
+3. Look for UI Desyncs: Is React state mutating directly without triggering re-renders, or are we unnecessarily deep-cloning massive state trees causing performance hits?
+
+### Phase 3: UI Thread & Animation Performance (The Cinematic Glass Engine)
+1. Audit the `react-native-reanimated` implementations (specifically in `app/pomodoro.tsx` and the `components/` like the DraggableHabitList and MasterDrawer).
+2. Are we accidentally executing heavy JS logic on the UI thread? 
+3. Check for Memory Leaks: Are there any Reanimated `SharedValues` or event listeners (like scroll listeners or hardware back buttons) that are not being properly cleaned up in `useEffect` return functions?
+4. Are we passing inline functions or unmemoized objects into flatlists or animated components causing catastrophic re-renders?
+
+### Phase 4: Async Logic & Background Edge Cases
+1. **The Time Problem:** Analyze how the app calculates "Streaks" and "Grace Periods". What happens if the user travels across time zones, or leaves the app open exactly at midnight? Are we relying on `new Date()` locally in a way that breaks streak logic?
+2. **The Pomodoro Problem:** What happens if the app goes to the background (OS suspends it) while the timer is running? Does the timer desync when the app returns to the foreground? 
+3. **Notifications (`lib/notifications.ts`):** Are we properly clearing old scheduled notifications when a user marks a habit as "Done", or are we leaking ghost notifications?
+
+### Phase 5: Error Handling & UX Degradation
+1. If the database push fails, or if `AsyncStorage` hits its quota limit, does the app crash silently, or is there a graceful fallback?
+2. Are there proper `try/catch` blocks around all `AsyncStorage` parses and API fetches?
+
+**Your Output format:**
+Start with Phase 1 and Phase 2. Provide a "Diagnostic Report" categorizing issues as [CRITICAL], [WARNING], or [OPTIMIZATION]. Give me a brief explanation of *why* it's broken, and present the exact code snippet required to fix the highest priority issue. Wait for my confirmation before moving to the next phases.

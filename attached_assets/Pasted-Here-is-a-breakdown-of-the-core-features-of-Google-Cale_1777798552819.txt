@@ -1,0 +1,30 @@
+Here is a breakdown of the core features of Google Calendar, specifically focusing on how it handles time management, events, and tasks:
+
+### 1. Events vs. Tasks
+Google Calendar differentiates between things you need to *attend* (Events) and things you need to *do* (Tasks).
+
+*   **Events:** This is the primary feature. You use events for meetings, appointments, or dedicated time blocks. They span a specific duration (e.g., 2:00 PM to 3:00 PM).
+*   **Tasks:** Integrated directly with Google Tasks, these are actionable items with a checkbox. You can assign them a specific date and time. If you don't mark a task as complete, it remains visible until you check it off, whereas events simply pass as time goes on.
+
+### 2. Time Thresholds and Scheduling
+Calendar gives you granular control over how time is blocked out:
+
+*   **Specific Time Blocks:** You can set precise start and end times for any event or task.
+*   **All-Day Events:** For birthdays, holidays, or daily reminders, you can check the "All day" box so the event sits at the top of your calendar rather than blocking out your hourly schedule.
+*   **Recurring Rules:** You can set events or tasks to repeat on a schedule. Options include daily, weekly, monthly, annually, or highly custom intervals (e.g., "Every 2 weeks on Tuesday and Thursday").
+*   **Time Zones:** You can specify the time zone for an event, which is crucial for remote meetings. It will automatically translate to the correct local time for anyone you invite.
+
+### 3. Details and Context
+When creating an event, you can add a wealth of information so you have everything you need when the time comes:
+
+*   **Descriptions:** A rich text box where you can add meeting agendas, notes, or hyperlinks.
+*   **Location:** You can add a physical address (which links directly to Google Maps) or click a button to automatically generate a Google Meet video conferencing link.
+
+### 4. Notifications and Alerts
+To ensure you don't miss a time threshold, you can configure reminders:
+
+*   **Custom Reminders:** You can set multiple alerts for a single event. For example, a pop-up notification on your phone 10 minutes before, and an email reminder 1 day before.
+*   **Task Notifications:** Tasks will also trigger notifications on your phone or desktop at the specific time you set for them.
+
+### 5. Organization and Sharing
+*   **Color Coding:** You can assign specific colors to different events to visually separate things like work, personal life, or fitness routines at a glance.

@@ -1,0 +1,20 @@
+Based on the robust local-first architecture and the "Cinematic Glass" aesthetic of FOCUS, here are several advanced **in-app only** features you can add to elevate the mobile experience:
+
+### 1. Advanced Habit Mechanics
+*   **Habit Stacking (Chain Reactions):** Allow users to link habits together based on James Clear's "Habit Stacking" concept. Visually represent this in the UI as a "glass chain." Checking off the trigger habit (e.g., "Make Bed") automatically highlights the next habit in the chain (e.g., "Meditate") with a glowing aura.
+*   **Vice Tracking (Abstinence Mode):** Create a specific UI state for negative habits you want to break (e.g., "No Sugar," "No Social Media"). Instead of checking them off, they survive the day *unless* the user taps "I Failed," which visually shatters the glass card.
+*   **Algorithmic Target Auto-Tuning:** Run a local background check on habit success rates. If a user fails a quantitative habit (e.g., "Read 20 Pages") for 5 consecutive days, surface a glassmorphic prompt suggesting a friction-reduction: *"Momentum is slowing. Temporarily reduce target to 10 pages to rebuild your streak?"*
+
+### 2. Deep Work & Focus Enhancements
+*   **In-App Soundscape Mixer (for Pomodoro):** Expand your `soundscape.ts` into a dedicated UI within `app/pomodoro.tsx`. Let users mix multiple audio tracks (e.g., 50% Rain, 20% Brown Noise, 30% Lo-Fi Beats) with sliding glass dials and save their custom "Focus Frequencies."
+*   **Strict Mode (App Blocking / Screen Pinning):** For the Pomodoro timer, add a toggle that utilizes React Native's screen pinning or deeply integrates a full-screen, distraction-free "Zen Mode" where leaving the timer screen before completion costs the user XP or shatters their current active token.
+*   **Micro-Reflections:** Immediately after completing a Pomodoro session or a high-priority habit, pop up a minimalist, single-input prompt asking, *"How did that feel?"* or to log a 1-5 mood rating. Tie this data to the habit.
+
+### 4. Native OS Integrations (Client-Side)
+*   **Live Activities & Dynamic Island (iOS):** Use Expo plugins to push the active Pomodoro timer or the current daily step count to the iOS Lock Screen and Dynamic Island. 
+*   **Interactive Widgets:** Build iOS/Android home screen widgets using Expo's native module integrations. Allow users to tap a widget to increment their water intake or mark a binary habit as done without ever opening the app.
+*   **Custom Haptic Engine:** Add a setting page that lets users customize the physical feedback of the app. Let them choose between "Mechanical Switch," "Glass Tap," or "Heavy Thud" for habit completions using `expo-haptics`.
+
+### 5. Local Analytics Depth
+*   **The "Perfect Day" Tracker:** Add a specific metric and visual badge for days where 100% of scheduled habits are completed. Create a separate calendar view that highlights only these "Flawless" days in glowing gold/neon.
+*   **Time-to-Completion Heatmap:** Track *when* users check off habits. Generate a localized chart showing if they are a morning achiever or a night owl, helping them optimize their routine scheduling.
