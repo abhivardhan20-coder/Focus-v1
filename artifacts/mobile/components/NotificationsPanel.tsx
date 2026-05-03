@@ -19,7 +19,8 @@ import type { Badge } from "@/constants/badges";
 export type NotificationItem =
   | { id: string; kind: "badge"; badge: Badge & { earnedAt: number }; timestamp: number }
   | { id: string; kind: "levelup"; level: number; timestamp: number }
-  | { id: string; kind: "streak"; milestone: { habitName: string; habitColor: string; days: number }; timestamp: number };
+  | { id: string; kind: "streak"; milestone: { habitName: string; habitColor: string; days: number }; timestamp: number }
+  | { id: string; kind: "streakAtRisk"; habits: Array<{ id: string; name: string; streak: number; icon: string; color: string }>; freezeTokens: number; timestamp: number };
 
 interface Props {
   visible: boolean;
@@ -57,11 +58,17 @@ function NotifRow({ item }: { item: NotificationItem }) {
     color = "#6366F1";
     title = `Level ${item.level} Reached!`;
     subtitle = `Keep completing habits to unlock Level ${item.level + 1}.`;
-  } else {
+  } else if (item.kind === "streak") {
     icon = "zap";
     color = item.milestone.habitColor || "#FBBF24";
     title = `${item.milestone.days}-Day Streak!`;
     subtitle = `${item.milestone.habitName} — ${item.milestone.days} days straight.`;
+  } else {
+    icon = "alert-circle";
+    color = "#FBBF24";
+    title = `Streaks at Risk`;
+    const count = item.habits.length;
+    subtitle = `${count} habit${count !== 1 ? "s" : ""} unprotected · ${item.freezeTokens} freeze token${item.freezeTokens !== 1 ? "s" : ""} left`;
   }
 
   return (

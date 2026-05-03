@@ -114,6 +114,7 @@ export default function HomeScreen() {
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const streakAlertQueuedRef = useRef(false);
   const prevCompletedRef = useRef(0);
 
   const todaySteps = stepsByDate[todayStr] ?? 0;
@@ -378,6 +379,30 @@ export default function HomeScreen() {
     setUnreadCount((n) => n + 1);
     clearLastStreakMilestone();
   }, [lastStreakMilestone]);
+
+  useEffect(() => {
+    if (atRiskHabits.length === 0 || !isToday || streakAlertQueuedRef.current) return;
+    const ts = Date.now();
+    setNotifications((prev) => [
+      {
+        id: `streak-at-risk-${ts}`,
+        kind: "streakAtRisk",
+        habits: atRiskHabits.map((h) => ({
+          id: h.id,
+          name: h.name,
+          streak: h.streak,
+          icon: h.icon,
+          color: h.color,
+        })),
+        freezeTokens: userStats.freezeTokens,
+        timestamp: ts,
+      },
+      ...prev,
+    ]);
+    setUnreadCount((n) => n + 1);
+    setAlertDismissed(false);
+    streakAlertQueuedRef.current = true;
+  }, [atRiskHabits.length, isToday, userStats.freezeTokens]);
 
   const handleOpenNotif = useCallback(() => {
     setNotifPanelOpen(true);
@@ -646,8 +671,8 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
-        {/* ── STREAK FREEZE ALERT ── */}
-        {atRiskHabits.length > 0 && !alertDismissed && userStats.freezeTokens > 0 && (
+        {/* ── STREAK FREEZE ALERT ── (hidden after first show, visible in notifications panel) */}
+        {atRiskHabits.length > 0 && !alertDismissed && !streakAlertQueuedRef.current && userStats.freezeTokens > 0 && (
           <StreakFreezeAlert
             habits={atRiskHabits}
             freezeTokens={userStats.freezeTokens}
