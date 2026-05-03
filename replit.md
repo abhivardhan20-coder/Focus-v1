@@ -77,3 +77,23 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 ### clearAllData behavior
 `HabitsContext.clearAllData()` saves `[]` to `STORAGE_KEY` (instead of removing key), so on next load the empty array is found and sample habits are NOT reloaded. Sample habits only load on first-ever install (when `STORAGE_KEY` is null).
+
+## Diagnostic Audit — Completed Phases
+
+### Phase 1 & 2 Fixes Applied (2026-05-03)
+
+**Bugs already fixed before this audit:**
+- `comp.skipped === true` check in `index.tsx` (skipped section always empty) → corrected to `!comp.completed && comp.skipReason !== undefined`
+- Pomodoro 1-second undercount in `pomodoro.tsx` → `activeDurations[phase] - Math.max(0, timeLeft - 1)`
+
+**Phase 1 — Type Safety fixes:**
+- `_layout.tsx`: `"calendar.fill"` and `"gear.fill"` SFSymbols type errors → cast with `as any`
+- `MasterDrawer.tsx`: Missing `router` import from `expo-router` → added import
+- `PrecisionTimeline.tsx`: `REMINDER_OPTIONS` field mismatch (`o.minutesBefore` → `o.minutes`)
+- `settings.tsx`: `BadgesModal` received non-existent `earnedBadgeIds` prop → removed (component reads from context)
+- `lib/db/src/index.ts`: `DATABASE_URL` check at module import time would crash server → wrapped in lazy getter (`getDb()` / `getPool()` with Proxy for backward compat)
+- TypeScript: 0 errors after all fixes
+
+**Phase 2 — State & Persistence fixes:**
+- **CRITICAL stale closure** in `completeHabit`, `uncompleteHabit`, `completeMicroHabit`: all three read `habits.find()` from stale closure → introduced `habitsRef` (updated synchronously on every render), replaced closure reads with ref reads, and added `alreadyCompleted` guard inside `setHabits` functional update to prevent double XP on both `habit.xpPoints` and `userStats.totalXP`
+- **Silent data loss**: single top-level `try/catch` swallowed all storage corruption errors → replaced with per-key `try/catch` blocks that `console.warn` and skip only the affected key, leaving all other data intact

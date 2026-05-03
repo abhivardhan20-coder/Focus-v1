@@ -619,6 +619,8 @@ const SAMPLE_EVENTS: CalendarEvent[] = [
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const [habits, setHabits] = useState<Habit[]>([]);
+  const habitsRef = useRef<Habit[]>([]);
+  habitsRef.current = habits;
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [userStats, setUserStats] = useState<UserStats>(DEFAULT_STATS);
   const [pomodoroSessions, setPomodoroSessions] = useState<PomodoroSession[]>([]);
@@ -632,34 +634,58 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      try {
-        const [hRaw, rRaw, sRaw, pRaw, stRaw, evRaw] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEY),
-          AsyncStorage.getItem(ROUTINES_KEY),
-          AsyncStorage.getItem(STATS_KEY),
-          AsyncStorage.getItem(POMODORO_KEY),
-          AsyncStorage.getItem(STEPS_KEY),
-          AsyncStorage.getItem(EVENTS_KEY),
-        ]);
-        let loadedHabits: Habit[] = SAMPLE_HABITS;
-        if (hRaw) {
+      const [hRaw, rRaw, sRaw, pRaw, stRaw, evRaw] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEY),
+        AsyncStorage.getItem(ROUTINES_KEY),
+        AsyncStorage.getItem(STATS_KEY),
+        AsyncStorage.getItem(POMODORO_KEY),
+        AsyncStorage.getItem(STEPS_KEY),
+        AsyncStorage.getItem(EVENTS_KEY),
+      ]).catch(() => [null, null, null, null, null, null] as const);
+
+      // Each key is parsed independently so one corrupted entry never
+      // silently wipes the rest of the user's data.
+      let loadedHabits: Habit[] = dedupeHabits(SAMPLE_HABITS);
+      if (hRaw) {
+        try {
           loadedHabits = dedupeHabits(JSON.parse(hRaw));
-          setHabits(loadedHabits);
-        } else {
-          loadedHabits = dedupeHabits(SAMPLE_HABITS);
-          setHabits(loadedHabits);
+        } catch {
+          console.warn("[FOCUS] habits storage corrupted — falling back to sample data");
         }
-        if (rRaw) setRoutines(JSON.parse(rRaw));
-        if (sRaw) {
+      }
+      setHabits(loadedHabits);
+
+      if (rRaw) {
+        try { setRoutines(JSON.parse(rRaw)); } catch {
+          console.warn("[FOCUS] routines storage corrupted — skipping");
+        }
+      }
+      if (sRaw) {
+        try {
           const parsed = JSON.parse(sRaw);
           setUserStats({ ...DEFAULT_STATS, ...parsed });
+        } catch {
+          console.warn("[FOCUS] userStats storage corrupted — using defaults");
         }
-        if (pRaw) setPomodoroSessions(JSON.parse(pRaw));
-        if (stRaw) setStepsByDate(JSON.parse(stRaw));
-        if (evRaw) setCalendarEvents(JSON.parse(evRaw));
-        // Reschedule any habit reminders that were lost (e.g. app reinstall)
-        initializeNotifications(loadedHabits).catch(() => {});
-      } catch (_) {}
+      }
+      if (pRaw) {
+        try { setPomodoroSessions(JSON.parse(pRaw)); } catch {
+          console.warn("[FOCUS] pomodoroSessions storage corrupted — skipping");
+        }
+      }
+      if (stRaw) {
+        try { setStepsByDate(JSON.parse(stRaw)); } catch {
+          console.warn("[FOCUS] stepsByDate storage corrupted — skipping");
+        }
+      }
+      if (evRaw) {
+        try { setCalendarEvents(JSON.parse(evRaw)); } catch {
+          console.warn("[FOCUS] calendarEvents storage corrupted — skipping");
+        }
+      }
+
+      // Reschedule any habit reminders that were lost (e.g. app reinstall)
+      initializeNotifications(loadedHabits).catch(() => {});
       setLoaded(true);
     })();
   }, []);
@@ -869,6 +895,8 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
         prev.map((h) => {
           if (h.id !== id) return h;
           const existing = h.completions.findIndex((c) => c.date === today);
+          // ✅ Read alreadyCompleted from prev (fresh state), not stale closure
+          const alreadyCompleted = existing >= 0 && h.completions[existing].completed;
           const completed = isQuantitativeComplete(h, value, duration);
           let newCompletions: HabitCompletion[];
           if (existing >= 0) {
@@ -901,10 +929,19 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           const xpBase = h.difficulty === "easy" ? 10 : h.difficulty === "medium" ? 20 : 30;
           const xpGain = isInComeback ? xpBase * 2 : xpBase;
           const newComebackUntil = newStreak >= 5 ? undefined : h.comebackUntil;
-          return { ...h, completions: newCompletions, streak: newStreak, longestStreak: newLongest, xpPoints: h.xpPoints + xpGain, comebackUntil: newComebackUntil };
+          return {
+            ...h,
+            completions: newCompletions,
+            streak: newStreak,
+            longestStreak: newLongest,
+            // ✅ Only add XP if not already completed — prevents double-increment on rapid taps
+            xpPoints: h.xpPoints + (alreadyCompleted ? 0 : xpGain),
+            comebackUntil: newComebackUntil,
+          };
         })
       );
-      const habit = habits.find((h) => h.id === id);
+      // ✅ Read from ref (latest committed state) instead of stale closure
+      const habit = habitsRef.current.find((h) => h.id === id);
       if (habit) {
         const today2 = getTodayStr();
 
@@ -933,19 +970,22 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        const xpBase = habit.difficulty === "easy" ? 10 : habit.difficulty === "medium" ? 20 : 30;
-        const xpGain = isInComeback ? xpBase * 2 : xpBase;
-        setUserStats((prev) => {
-          const newXP = prev.totalXP + xpGain;
-          const newLevel = Math.floor(newXP / 500) + 1;
-          if (newLevel > prev.level) {
-            setTimeout(() => setLastLevelUp(newLevel), 500);
-          }
-          return { ...prev, totalXP: newXP, totalCompleted: prev.totalCompleted + 1, level: newLevel };
-        });
+        // ✅ Only update userStats if the habit wasn't already completed today
+        if (!alreadyCompletedToday) {
+          const xpBase = habit.difficulty === "easy" ? 10 : habit.difficulty === "medium" ? 20 : 30;
+          const xpGain = isInComeback ? xpBase * 2 : xpBase;
+          setUserStats((prev) => {
+            const newXP = prev.totalXP + xpGain;
+            const newLevel = Math.floor(newXP / 500) + 1;
+            if (newLevel > prev.level) {
+              setTimeout(() => setLastLevelUp(newLevel), 500);
+            }
+            return { ...prev, totalXP: newXP, totalCompleted: prev.totalCompleted + 1, level: newLevel };
+          });
+        }
       }
     },
-    [habits]
+    [] // ✅ No stale closure dependency — reads from habitsRef and functional prev
   );
 
   const uncompleteHabit = useCallback(
@@ -963,24 +1003,29 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           return { ...h, completions: newCompletions, streak: newStreak };
         })
       );
-      const habit = habits.find((h) => h.id === id);
+      // ✅ Read from ref instead of stale closure
+      const habit = habitsRef.current.find((h) => h.id === id);
       if (habit) {
         const today2 = getTodayStr();
-        const isInComeback = !!(habit.comebackUntil && habit.comebackUntil >= today2);
-        const xpBase = habit.difficulty === "easy" ? 10 : habit.difficulty === "medium" ? 20 : 30;
-        const xpGain = isInComeback ? xpBase * 2 : xpBase;
-        setUserStats((prev) => {
-          const newXP = Math.max(0, prev.totalXP - xpGain);
-          return {
-            ...prev,
-            totalXP: newXP,
-            totalCompleted: Math.max(0, prev.totalCompleted - 1),
-            level: Math.max(1, Math.floor(newXP / 500) + 1),
-          };
-        });
+        // ✅ Only deduct XP if the habit was actually completed today
+        const wasCompletedToday = !!habit.completions.find((c) => c.date === today2 && c.completed);
+        if (wasCompletedToday) {
+          const isInComeback = !!(habit.comebackUntil && habit.comebackUntil >= today2);
+          const xpBase = habit.difficulty === "easy" ? 10 : habit.difficulty === "medium" ? 20 : 30;
+          const xpGain = isInComeback ? xpBase * 2 : xpBase;
+          setUserStats((prev) => {
+            const newXP = Math.max(0, prev.totalXP - xpGain);
+            return {
+              ...prev,
+              totalXP: newXP,
+              totalCompleted: Math.max(0, prev.totalCompleted - 1),
+              level: Math.max(1, Math.floor(newXP / 500) + 1),
+            };
+          });
+        }
       }
     },
-    [habits]
+    [] // ✅ No stale closure dependency
   );
 
   const skipHabit = useCallback((id: string, date?: string, reason?: string) => {
@@ -1085,6 +1130,9 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     setHabits((prev) =>
       prev.map((h) => {
         if (h.id !== id) return h;
+        // ✅ Read alreadyCompleted from prev (fresh state), not stale closure
+        const existing = h.completions.findIndex((c) => c.date === today);
+        const alreadyCompleted = existing >= 0 && h.completions[existing].completed;
         const microComp: HabitCompletion = {
           date: today,
           completed: true,
@@ -1092,7 +1140,6 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           isMicro: true,
           timestamp: Date.now(),
         };
-        const existing = h.completions.findIndex((c) => c.date === today);
         const newCompletions =
           existing >= 0
             ? h.completions.map((c, i) => (i === existing ? microComp : c))
@@ -1101,19 +1148,32 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
         const newLongest = Math.max(h.longestStreak, newStreak);
         const xpBase = h.difficulty === "easy" ? 10 : h.difficulty === "medium" ? 20 : 30;
         const xpGain = Math.ceil(xpBase * 0.5);
-        return { ...h, completions: newCompletions, streak: newStreak, longestStreak: newLongest, xpPoints: h.xpPoints + xpGain };
+        return {
+          ...h,
+          completions: newCompletions,
+          streak: newStreak,
+          longestStreak: newLongest,
+          // ✅ Only add XP if not already completed — prevents double-increment on rapid taps
+          xpPoints: h.xpPoints + (alreadyCompleted ? 0 : xpGain),
+        };
       })
     );
-    const habit = habits.find((h) => h.id === id);
+    // ✅ Read from ref instead of stale closure
+    const habit = habitsRef.current.find((h) => h.id === id);
     if (habit) {
-      const xpBase = habit.difficulty === "easy" ? 10 : habit.difficulty === "medium" ? 20 : 30;
-      const xpGain = Math.ceil(xpBase * 0.5);
-      setUserStats((prev) => {
-        const newXP = prev.totalXP + xpGain;
-        return { ...prev, totalXP: newXP, totalCompleted: prev.totalCompleted + 1, level: Math.floor(newXP / 500) + 1 };
-      });
+      const today2 = getTodayStr();
+      // ✅ Only award userStats XP if habit wasn't already completed today
+      const alreadyCompletedToday = !!habit.completions.find((c) => c.date === today2 && c.completed);
+      if (!alreadyCompletedToday) {
+        const xpBase = habit.difficulty === "easy" ? 10 : habit.difficulty === "medium" ? 20 : 30;
+        const xpGain = Math.ceil(xpBase * 0.5);
+        setUserStats((prev) => {
+          const newXP = prev.totalXP + xpGain;
+          return { ...prev, totalXP: newXP, totalCompleted: prev.totalCompleted + 1, level: Math.floor(newXP / 500) + 1 };
+        });
+      }
     }
-  }, [habits]);
+  }, []); // ✅ No stale closure dependency
 
   const freezeStreak = useCallback((id: string) => {
     skipHabit(id);

@@ -667,7 +667,7 @@ export function PrecisionTimeline({
                     <Feather name="bell" size={13} color={colors.mutedForeground} />
                     <Text style={[styles.detailMeta, { color: colors.mutedForeground, fontFamily: font.regular }]}>
                       {ev.reminders.map(r => {
-                        const opt = REMINDER_OPTIONS.find(o => o.minutesBefore === r.minutesBefore);
+                        const opt = REMINDER_OPTIONS.find(o => o.minutes === r.minutesBefore);
                         return opt?.label ?? `${r.minutesBefore}m`;
                       }).join(", ")}
                     </Text>

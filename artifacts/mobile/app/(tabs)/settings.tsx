@@ -1265,7 +1265,6 @@ export default function SettingsScreen() {
       <BadgesModal
         visible={badgesModalOpen}
         onClose={() => setBadgesModalOpen(false)}
-        earnedBadgeIds={userStats.badges}
       />
     </ScrollView>
   );

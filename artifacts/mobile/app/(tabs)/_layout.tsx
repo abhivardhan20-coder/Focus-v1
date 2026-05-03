@@ -22,11 +22,11 @@ function NativeTabLayout() {
         <Label>Analysis</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="history">
-        <Icon sf={{ default: "calendar", selected: "calendar.fill" }} />
+        <Icon sf={{ default: "calendar", selected: "calendar.fill" as any }} />
         <Label>History</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: "gear", selected: "gear.fill" }} />
+        <Icon sf={{ default: "gear", selected: "gear.fill" as any }} />
         <Label>Settings</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
