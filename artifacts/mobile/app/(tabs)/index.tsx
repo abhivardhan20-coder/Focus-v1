@@ -31,9 +31,7 @@ import { DifficultyNudgeCard } from "@/components/DifficultyNudgeCard";
 import { StepsModal } from "@/components/StepsModal";
 import { ConfettiCelebration } from "@/components/ConfettiCelebration";
 import { WeeklyRecapCard } from "@/components/WeeklyRecapCard";
-import { BadgeEarnedModal } from "@/components/BadgeEarnedModal";
-import { LevelUpModal } from "@/components/LevelUpModal";
-import { StreakMilestoneModal } from "@/components/StreakMilestoneModal";
+import { NotificationsPanel, type NotificationItem } from "@/components/NotificationsPanel";
 
 const HOUR_GREETINGS: [number, string][] = [
   [5, "Good night"],
@@ -113,6 +111,9 @@ export default function HomeScreen() {
   const [dismissedNudges, setDismissedNudges] = useState<string[]>([]);
   const [stepsModalOpen, setStepsModalOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const prevCompletedRef = useRef(0);
 
   const todaySteps = stepsByDate[todayStr] ?? 0;
@@ -346,6 +347,48 @@ export default function HomeScreen() {
     prevCompletedRef.current = completed;
   }, [completed, total, isToday]);
 
+  useEffect(() => {
+    if (!lastBadgeEarned) return;
+    setNotifications((prev) => [
+      { id: `badge-${lastBadgeEarned.earnedAt}`, kind: "badge", badge: lastBadgeEarned, timestamp: lastBadgeEarned.earnedAt },
+      ...prev,
+    ]);
+    setUnreadCount((n) => n + 1);
+    clearLastBadgeEarned();
+  }, [lastBadgeEarned]);
+
+  useEffect(() => {
+    if (lastLevelUp === null) return;
+    const ts = Date.now();
+    setNotifications((prev) => [
+      { id: `level-${ts}`, kind: "levelup", level: lastLevelUp, timestamp: ts },
+      ...prev,
+    ]);
+    setUnreadCount((n) => n + 1);
+    clearLastLevelUp();
+  }, [lastLevelUp]);
+
+  useEffect(() => {
+    if (!lastStreakMilestone) return;
+    const ts = Date.now();
+    setNotifications((prev) => [
+      { id: `streak-${ts}`, kind: "streak", milestone: lastStreakMilestone, timestamp: ts },
+      ...prev,
+    ]);
+    setUnreadCount((n) => n + 1);
+    clearLastStreakMilestone();
+  }, [lastStreakMilestone]);
+
+  const handleOpenNotif = useCallback(() => {
+    setNotifPanelOpen(true);
+    setUnreadCount(0);
+  }, []);
+
+  const handleClearAllNotif = useCallback(() => {
+    setNotifications([]);
+    setUnreadCount(0);
+  }, []);
+
   const handleComplete = useCallback((habit: Habit) => {
     if (!isToday) return;
     if (habit.type === "quantitative") return;
@@ -485,6 +528,17 @@ export default function HomeScreen() {
               {archivedCount > 0 && (
                 <View style={[styles.badge, { backgroundColor: colors.info }]}>
                   <Text style={styles.badgeText}>{archivedCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleOpenNotif}
+              style={[styles.hBtn, { backgroundColor: colors.card, borderColor: colors.glassBorder }]}
+            >
+              <Feather name="bell" size={16} color={colors.warning} />
+              {unreadCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: colors.warning }]}>
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -1119,18 +1173,11 @@ export default function HomeScreen() {
         <ConfettiCelebration onDone={() => setShowConfetti(false)} />
       )}
 
-      {/* ── CELEBRATION MODALS ── */}
-      <BadgeEarnedModal
-        badge={lastBadgeEarned}
-        onClose={clearLastBadgeEarned}
-      />
-      <LevelUpModal
-        level={lastLevelUp}
-        onClose={clearLastLevelUp}
-      />
-      <StreakMilestoneModal
-        milestone={lastStreakMilestone}
-        onClose={clearLastStreakMilestone}
+      <NotificationsPanel
+        visible={notifPanelOpen}
+        notifications={notifications}
+        onClose={() => setNotifPanelOpen(false)}
+        onClearAll={handleClearAllNotif}
       />
     </>
   );
