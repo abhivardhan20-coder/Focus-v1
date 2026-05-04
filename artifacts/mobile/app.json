@@ -14,13 +14,20 @@
       "backgroundColor": "#0D0D1A"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.focusapp.mobile"
     },
     "notification": {
       "icon": "./assets/images/ic_notification.png",
       "color": "#0D0D1A"
     },
     "android": {
+      "package": "com.focusapp.mobile",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0D0D1A"
+      },
       "notification": {
         "icon": "./assets/images/ic_notification.png"
       }
