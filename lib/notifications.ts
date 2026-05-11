@@ -167,7 +167,6 @@ export async function scheduleHabitReminder(
         sound: true,
       },
       trigger: {
-        type: "daily" as any,
         hour: hh,
         minute: mm,
         repeats: true,

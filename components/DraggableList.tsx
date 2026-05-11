@@ -19,11 +19,67 @@ import type { Habit } from "@/context/HabitsContext";
 const CARD_H = 82;
 const MAX_SLOTS = 30;
 
-interface DraggableListProps {
-  habits: Habit[];
+interface DraggableItemProps {
+  habit: Habit;
+  index: number;
+  draggingIdx: number | null;
+  floatDy: ReAnimated.SharedValue<number>;
+  floatScale: ReAnimated.SharedValue<number>;
+  shift: ReAnimated.SharedValue<number>;
   reorderMode: boolean;
   renderCard: (habit: Habit, reorderMode: boolean) => React.ReactNode;
-  onReorder: (orderedIds: string[]) => void;
+  makePanGesture: (visualIdx: number) => any;
+  colors: any;
+}
+
+function DraggableItem({
+  habit,
+  index,
+  draggingIdx,
+  floatDy,
+  floatScale,
+  shift,
+  reorderMode,
+  renderCard,
+  makePanGesture,
+  colors,
+}: DraggableItemProps) {
+  const isDragging = draggingIdx === index;
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: isDragging
+      ? [{ translateY: floatDy.value }, { scale: floatScale.value }]
+      : [{ translateY: shift.value }],
+    zIndex: isDragging ? 999 : 1,
+  }));
+
+  return (
+    <View>
+      <GestureDetector gesture={makePanGesture(index)}>
+        <ReAnimated.View style={[styles.item, animatedStyle]}>
+          <View style={styles.row}>
+            {reorderMode && (
+              <View
+                style={[
+                  styles.handle,
+                  isDragging && {
+                    backgroundColor: colors.primary + "20",
+                  },
+                ]}
+              >
+                <Feather
+                  name="menu"
+                  size={17}
+                  color={isDragging ? colors.primary : colors.mutedForeground}
+                />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>{renderCard(habit, reorderMode)}</View>
+          </View>
+        </ReAnimated.View>
+      </GestureDetector>
+    </View>
+  );
 }
 
 export function DraggableList({
@@ -139,50 +195,21 @@ export function DraggableList({
 
   return (
     <View>
-      {orderedHabits.map((habit, i) => {
-        const isDragging = draggingIdx === i;
-
-        return (
-          <View key={habit.id}>
-            <GestureDetector gesture={makePanGesture(i)}>
-              <ReAnimated.View
-                style={[
-                  styles.item,
-                  // eslint-disable-next-line react-hooks/rules-of-hooks
-                  useAnimatedStyle(() => ({
-                    transform: draggingIdx === i
-                      ? [{ translateY: floatDy.value }, { scale: floatScale.value }]
-                      : [{ translateY: shifts[i].value }],
-                    zIndex: draggingIdx === i ? 999 : 1,
-                  })),
-                ]}
-              >
-                <View style={styles.row}>
-                  {reorderMode && (
-                    <View
-                      style={[
-                        styles.handle,
-                        isDragging && {
-                          backgroundColor: colors.primary + "20",
-                        },
-                      ]}
-                    >
-                      <Feather
-                        name="menu"
-                        size={17}
-                        color={isDragging ? colors.primary : colors.mutedForeground}
-                      />
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    {renderCard(habit, reorderMode)}
-                  </View>
-                </View>
-              </ReAnimated.View>
-            </GestureDetector>
-          </View>
-        );
-      })}
+      {orderedHabits.map((habit, i) => (
+        <DraggableItem
+          key={habit.id}
+          habit={habit}
+          index={i}
+          draggingIdx={draggingIdx}
+          floatDy={floatDy}
+          floatScale={floatScale}
+          shift={shifts[i]}
+          reorderMode={reorderMode}
+          renderCard={renderCard}
+          makePanGesture={makePanGesture}
+          colors={colors}
+        />
+      ))}
     </View>
   );
 }
