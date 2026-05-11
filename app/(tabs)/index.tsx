@@ -22,14 +22,14 @@ import { DaySelector } from "@/components/DaySelector";
 import { SparklineChart } from "@/components/SparklineChart";
 import { PrecisionTimeline } from "@/components/PrecisionTimeline";
 import { RadialMenu } from "@/components/RadialMenu";
-import { DraggableHabitList } from "@/components/DraggableHabitList";
+import { DraggableList } from "@/components/DraggableList";
 import { StreakFreezeAlert } from "@/components/StreakFreezeAlert";
 import { StreakCoreCard } from "@/components/StreakCoreCard";
 import { MicroHabitModal } from "@/components/MicroHabitModal";
 import { SkipReasonModal } from "@/components/SkipReasonModal";
-import { DifficultyNudgeCard } from "@/components/DifficultyNudgeCard";
+import { NudgeCard } from "@/components/NudgeCard";
 import { StepsModal } from "@/components/StepsModal";
-import { ConfettiCelebration } from "@/components/ConfettiCelebration";
+import { Confetti } from "@/components/Confetti";
 import { WeeklyRecapCard } from "@/components/WeeklyRecapCard";
 import { NotificationsPanel, type NotificationItem } from "@/components/NotificationsPanel";
 
@@ -130,28 +130,40 @@ export default function HomeScreen() {
     : getProgressForDate(selectedDate);
   const progress = total > 0 ? completed / total : 0;
 
+  // --- Indexed Maps for O(1) Lookups ---
+  const habitCompletionsMap = useMemo(() => {
+    const map = new Map<string, Map<string, any>>();
+    habits.forEach((h) => {
+      const cMap = new Map<string, any>();
+      h.completions.forEach((c) => cMap.set(c.date, c));
+      map.set(h.id, cMap);
+    });
+    return map;
+  }, [habits]);
+
   const atRiskHabits = useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 14 || !isToday) return [];
     return habits.filter((h) => {
       if (h.archived || !isHabitDueToday(h)) return false;
-      const comp = getTodayCompletion(h);
-      if (comp) return false;
+      const comp = habitCompletionsMap.get(h.id)?.get(todayStr);
+      if (comp?.completed) return false;
       return h.streak >= 1;
     });
-  }, [habits, isToday, getTodayCompletion, isHabitDueToday]);
+  }, [habits, isToday, habitCompletionsMap, isHabitDueToday, todayStr]);
 
   const completionRates = useMemo(() => {
     const rates: Record<string, number> = {};
+    const today = new Date();
     for (let i = 0; i < 14; i++) {
-      const d = new Date();
+      const d = new Date(today);
       d.setDate(d.getDate() - i);
       const ds = d.toISOString().split("T")[0];
       const { completed: c, total: t } = getProgressForDate(ds);
       if (t > 0) rates[ds] = c / t;
     }
     return rates;
-  }, [habits]);
+  }, [getProgressForDate]);
 
   const last7Rates = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
@@ -170,13 +182,15 @@ export default function HomeScreen() {
 
   const streakSparkline = useMemo(() => {
     if (!topStreakHabit) return Array(7).fill(0);
+    const comps = habitCompletionsMap.get(topStreakHabit.id);
+    const today = new Date();
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
+      const d = new Date(today);
       d.setDate(d.getDate() - (6 - i));
       const ds = d.toISOString().split("T")[0];
-      return topStreakHabit.completions.find(c => c.date === ds && c.completed) ? 1 : 0;
+      return comps?.get(ds)?.completed ? 1 : 0;
     });
-  }, [topStreakHabit]);
+  }, [topStreakHabit, habitCompletionsMap]);
 
   const todayFocusMin = useMemo(() => {
     return pomodoroSessions
@@ -318,6 +332,7 @@ export default function HomeScreen() {
       .filter(h => !h.archived && !dismissedNudges.includes(h.id))
       .map(h => {
         let due = 0, done = 0;
+        const comps = habitCompletionsMap.get(h.id);
         for (let i = 0; i < 30; i++) {
           const d = new Date(today);
           d.setDate(today.getDate() - i);
@@ -328,9 +343,10 @@ export default function HomeScreen() {
           else if (h.frequency === "weekdays") isDue = dow >= 1 && dow <= 5;
           else if (h.frequency === "weekends") isDue = dow === 0 || dow === 6;
           else if (h.frequency === "custom") isDue = (h.customDays ?? []).includes(dow);
+          
           if (isDue) {
             due++;
-            if (h.completions.find(c => c.date === ds && c.completed)) done++;
+            if (comps?.get(ds)?.completed) done++;
           }
         }
         if (due < 14) return null;
@@ -340,7 +356,7 @@ export default function HomeScreen() {
         return null;
       })
       .filter(Boolean) as { habit: Habit; type: "upgrade" | "downgrade"; rate: number }[];
-  }, [habits, isToday, dismissedNudges]);
+  }, [habits, isToday, dismissedNudges, habitCompletionsMap]);
 
   useEffect(() => {
     if (isToday && total > 0 && completed === total && prevCompletedRef.current < total) {
@@ -901,7 +917,7 @@ export default function HomeScreen() {
           <View style={{ paddingHorizontal: 16, gap: 8 }}>
             {difficultyNudges.slice(0, 2).map(({ habit, type, rate }) => 
               !difficultyNudgesQueuedRef.current.has(habit.id) && (
-                <DifficultyNudgeCard
+                <NudgeCard
                   key={habit.id}
                   habit={habit}
                   type={type}
@@ -989,7 +1005,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
             ) : (
-              <DraggableHabitList
+              <DraggableList
                 habits={reorderMode ? dueHabits : filteredHabits}
                 reorderMode={reorderMode}
                 onReorder={handleReorder}
@@ -1028,7 +1044,7 @@ export default function HomeScreen() {
                 <>
                   {/* Pending habits list */}
                   {pendingHabits.length > 0 ? (
-                    <DraggableHabitList
+                    <DraggableList
                       habits={uniquePendingHabits}
                       reorderMode={false}
                       onReorder={handleReorder}
@@ -1223,7 +1239,7 @@ export default function HomeScreen() {
       />
 
       {showConfetti && (
-        <ConfettiCelebration onDone={() => setShowConfetti(false)} />
+        <Confetti onDone={() => setShowConfetti(false)} />
       )}
 
       <NotificationsPanel

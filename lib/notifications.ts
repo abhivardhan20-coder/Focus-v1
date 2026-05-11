@@ -17,26 +17,37 @@ async function getNotifications() {
 async function saveReminderMeta(habitId: string, time: string, habitName: string) {
   try {
     const raw = await AsyncStorage.getItem(REMINDER_KEY);
-    const all: Record<string, { time: string; habitName: string }> = raw ? JSON.parse(raw) : {};
+    let all: Record<string, { time: string; habitName: string }> = {};
+    if (raw) {
+      try { all = JSON.parse(raw); } catch { all = {}; }
+    }
     all[habitId] = { time, habitName };
     await AsyncStorage.setItem(REMINDER_KEY, JSON.stringify(all));
-  } catch {}
+  } catch (e) {
+    console.error("saveReminderMeta failed:", e);
+  }
 }
 
 async function removeReminderMeta(habitId: string) {
   try {
     const raw = await AsyncStorage.getItem(REMINDER_KEY);
     if (!raw) return;
-    const all: Record<string, { time: string; habitName: string }> = JSON.parse(raw);
-    delete all[habitId];
-    await AsyncStorage.setItem(REMINDER_KEY, JSON.stringify(all));
+    let all: Record<string, { time: string; habitName: string }>;
+    try { all = JSON.parse(raw); } catch { return; }
+    if (all && all[habitId]) {
+      delete all[habitId];
+      await AsyncStorage.setItem(REMINDER_KEY, JSON.stringify(all));
+    }
   } catch {}
 }
 
 async function saveNotifId(habitId: string, notifId: string) {
   try {
     const raw = await AsyncStorage.getItem(NOTIF_ID_KEY);
-    const all: Record<string, string> = raw ? JSON.parse(raw) : {};
+    let all: Record<string, string> = {};
+    if (raw) {
+      try { all = JSON.parse(raw); } catch { all = {}; }
+    }
     all[habitId] = notifId;
     await AsyncStorage.setItem(NOTIF_ID_KEY, JSON.stringify(all));
   } catch {}
@@ -46,7 +57,8 @@ async function getNotifId(habitId: string): Promise<string | null> {
   try {
     const raw = await AsyncStorage.getItem(NOTIF_ID_KEY);
     if (!raw) return null;
-    const all: Record<string, string> = JSON.parse(raw);
+    let all: Record<string, string>;
+    try { all = JSON.parse(raw); } catch { return null; }
     return all[habitId] ?? null;
   } catch {
     return null;
@@ -57,9 +69,12 @@ async function removeNotifId(habitId: string) {
   try {
     const raw = await AsyncStorage.getItem(NOTIF_ID_KEY);
     if (!raw) return;
-    const all: Record<string, string> = JSON.parse(raw);
-    delete all[habitId];
-    await AsyncStorage.setItem(NOTIF_ID_KEY, JSON.stringify(all));
+    let all: Record<string, string>;
+    try { all = JSON.parse(raw); } catch { return; }
+    if (all && all[habitId]) {
+      delete all[habitId];
+      await AsyncStorage.setItem(NOTIF_ID_KEY, JSON.stringify(all));
+    }
   } catch {}
 }
 

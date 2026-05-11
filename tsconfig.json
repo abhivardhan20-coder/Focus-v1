@@ -10,14 +10,29 @@
     }
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "context/**/*.ts",
+    "context/**/*.tsx",
+    "hooks/**/*.ts",
+    "constants/**/*.ts",
+    "lib/notifications.ts",
+    "lib/soundscape.ts",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ],
+  "exclude": [
+    "**/dist",
+    "**/artifacts",
+    "**/node_modules",
+    "**/.next",
+    "**/.expo"
+  ],
   "references": [
     {
-      "path": "../../lib/api-client-react"
+      "path": "./lib/api-client-react"
     }
   ]
 }

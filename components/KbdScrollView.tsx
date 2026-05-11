@@ -6,7 +6,7 @@ import { Platform, ScrollView, ScrollViewProps } from "react-native";
 
 type Props = KeyboardAwareScrollViewProps & ScrollViewProps;
 
-export function KeyboardAwareScrollViewCompat({
+export function KbdScrollView({
   children,
   keyboardShouldPersistTaps = "handled",
   ...props

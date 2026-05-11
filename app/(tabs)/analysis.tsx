@@ -25,7 +25,7 @@ import { ProgressRing } from "@/components/ProgressRing";
 import { PentagonChart } from "@/components/PentagonChart";
 import { MasterDrawer } from "@/components/MasterDrawer";
 import { CategoryDrillDown } from "@/components/CategoryDrillDown";
-import { HabitAnalysisSheet } from "@/components/HabitAnalysisSheet";
+import { AnalysisSheet } from "@/components/AnalysisSheet";
 
 type Period = "7d" | "30d" | "all";
 
@@ -569,7 +569,7 @@ export default function AnalysisScreen() {
       habitStats={habitStats}
       periodLabel={period === "7d" ? "7 days" : period === "30d" ? "30 days" : "All time"}
     />
-    <HabitAnalysisSheet
+    <AnalysisSheet
       visible={analysisHabit !== null}
       onClose={() => setAnalysisHabit(null)}
       habit={analysisHabit}

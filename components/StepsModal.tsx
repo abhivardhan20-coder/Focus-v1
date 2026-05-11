@@ -20,7 +20,7 @@ import { useColors } from "@/hooks/useColors";
 import { useFont } from "@/hooks/useFont";
 import { useHabits, getTodayStr } from "@/context/HabitsContext";
 import { ProgressRing } from "./ProgressRing";
-import { NumericHeatmapChart } from "./NumericHeatmapChart";
+import { NumHeatmap } from "./NumHeatmap";
 
 const { width: W, height: H } = Dimensions.get("window");
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -352,7 +352,7 @@ export function StepsModal({ visible, onClose }: StepsModalProps) {
 
               {/* 1-year heatmap */}
               {viewMode === "heat" && (
-                <NumericHeatmapChart
+                <NumHeatmap
                   data={stepsByDate}
                   maxVal={stepsGoal}
                   color={colors.success}

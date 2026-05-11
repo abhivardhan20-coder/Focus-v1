@@ -57,6 +57,8 @@ import { HabitsProvider } from "@/context/HabitsContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { GraphPreferencesProvider } from "@/context/GraphPreferencesContext";
 
+import { LoadingView } from "@/components/LoadingView";
+
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
@@ -84,10 +86,12 @@ function RootLayoutNav() {
     <>
       <NotificationResponseHandler />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)"      options={{ headerShown: false }} />
-        <Stack.Screen name="create"      options={{ headerShown: false, presentation: "modal" }} />
-        <Stack.Screen name="pomodoro"    options={{ headerShown: false, presentation: "card" }} />
-        <Stack.Screen name="habit/[id]"  options={{ headerShown: false, presentation: "card" }} />
+        <Stack.Screen name="(tabs)"        options={{ headerShown: false }} />
+        <Stack.Screen name="create"        options={{ headerShown: false, presentation: "modal" }} />
+        <Stack.Screen name="create-routine" options={{ headerShown: false, presentation: "modal" }} />
+        <Stack.Screen name="pomodoro"      options={{ headerShown: false, presentation: "card" }} />
+        <Stack.Screen name="habit/[id]"    options={{ headerShown: false, presentation: "card" }} />
+        <Stack.Screen name="routine/[id]"  options={{ headerShown: false, presentation: "card" }} />
       </Stack>
     </>
   );
@@ -106,7 +110,13 @@ export default function RootLayout() {
     if (fontsLoaded || fontError) SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!fontsLoaded && !fontError) {
+    return (
+      <ThemeProvider>
+        <LoadingView />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider>

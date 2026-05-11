@@ -44,10 +44,10 @@ function NotifRow({ item }: { item: NotificationItem }) {
   const colors = useColors();
   const font = useFont();
 
-  let icon: string;
-  let color: string;
-  let title: string;
-  let subtitle: string;
+  let icon: string = "bell";
+  let color: string = "#3B82F6";
+  let title: string = "Notification";
+  let subtitle: string = "";
 
   if (item.kind === "badge") {
     icon = item.badge.icon ?? "award";
@@ -70,11 +70,15 @@ function NotifRow({ item }: { item: NotificationItem }) {
     title = `Streaks at Risk`;
     const count = item.habits.length;
     subtitle = `${count} habit${count !== 1 ? "s" : ""} unprotected · ${item.freezeTokens} freeze token${item.freezeTokens !== 1 ? "s" : ""} left`;
-  } else {
+  } else if (item.kind === "difficultyNudge") {
     icon = item.type === "upgrade" ? "trending-up" : "trending-down";
     color = item.type === "upgrade" ? "#10B981" : "#F59E0B";
     title = item.type === "upgrade" ? "Ready to Level Up" : "Momentum Reset";
     subtitle = `${item.habitName} — ${Math.round(item.rate * 100)}% completion. Adjust difficulty to ${item.newDifficulty}.`;
+  } else {
+    // Fallback for future-proofing
+    title = "System Update";
+    subtitle = "Something new happened in Focus!";
   }
 
   return (

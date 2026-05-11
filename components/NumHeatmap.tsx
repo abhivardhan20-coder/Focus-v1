@@ -24,7 +24,7 @@ const CELL = 13;
 const GAP  = 2;
 const DOW  = ["S", "M", "T", "W", "T", "F", "S"];
 
-export function NumericHeatmapChart({ data, maxVal, color, weeks = 12, label }: Props) {
+export function NumHeatmap({ data, maxVal, color, weeks = 12, label }: Props) {
   const colors = useColors();
 
   const { grid, monthLabels } = useMemo(() => {

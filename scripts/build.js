@@ -161,6 +161,7 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
       detached: false,
       cwd: projectRoot,
       env,
+      shell: true,
     },
   );
 
@@ -230,7 +231,7 @@ async function downloadFile(url, outputPath) {
 async function downloadBundle(platform, timestamp) {
   const entryPath = path.resolve(projectRoot, "node_modules", "expo-router", "entry");
   const bundlePath = path.relative(workspaceRoot, entryPath);
-  const url = new URL(`http://localhost:8081/${bundlePath}.bundle`);
+  const url = new URL(`http://localhost:8081/${bundlePath.replace(/\\/g, "/")}.bundle`);
   url.searchParams.set("platform", platform);
   url.searchParams.set("dev", "false");
   url.searchParams.set("hot", "false");

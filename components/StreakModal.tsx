@@ -25,7 +25,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function StreakMilestoneModal({ milestone, onClose }: Props) {
+export function StreakModal({ milestone, onClose }: Props) {
   const colors = useColors();
   const font = useFont();
   const scaleAnim = useRef(new Animated.Value(0.65)).current;

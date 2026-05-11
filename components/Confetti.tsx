@@ -37,7 +37,7 @@ interface Props {
   onDone?: () => void;
 }
 
-export function ConfettiCelebration({ onDone }: Props) {
+export function Confetti({ onDone }: Props) {
   const { width: screenW, height: screenH } = Dimensions.get("window");
   const particles = useMemo(() => genParticles(screenW), [screenW]);
 

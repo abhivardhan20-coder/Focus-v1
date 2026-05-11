@@ -2,21 +2,22 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
 import {
-  Animated,
-  PanResponder,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import ReAnimated, {
   Easing as REasing,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
+  runOnJS,
 } from "react-native-reanimated";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
@@ -147,7 +148,7 @@ export function HabitCard({
 }: HabitCardProps) {
   const colors = useColors();
   const font = useFont();
-  const translateX = useRef(new Animated.Value(0)).current;
+  const translateX = useSharedValue(0);
 
   const handleLongPress = () => {
     if (readonly || reorderMode) return;
@@ -155,47 +156,35 @@ export function HabitCard({
     onLongPress?.();
   };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) =>
-        !readonly && !reorderMode && Math.abs(g.dx) > 10 && Math.abs(g.dy) < 30,
-      onPanResponderMove: (_, g) => {
-        translateX.setValue(g.dx);
-      },
-      onPanResponderRelease: (_, g) => {
-        if (g.dx > SWIPE_THRESHOLD) {
-          Animated.timing(translateX, {
-            toValue: 400,
-            duration: 180,
-            useNativeDriver: true,
-          }).start(() => {
-            if (Platform.OS !== "web")
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            onArchive();
-            translateX.setValue(0);
-          });
-        } else if (g.dx < -SWIPE_THRESHOLD) {
-          Animated.timing(translateX, {
-            toValue: -400,
-            duration: 180,
-            useNativeDriver: true,
-          }).start(() => {
-            if (Platform.OS !== "web")
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            onSkip();
-            translateX.setValue(0);
-          });
-        } else {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 160,
-            friction: 8,
-          }).start();
-        }
-      },
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-10, 10])
+    .onUpdate((event) => {
+      if (readonly || reorderMode) return;
+      translateX.value = event.translationX;
     })
-  ).current;
+    .onEnd((event) => {
+      if (readonly || reorderMode) return;
+
+      if (event.translationX > SWIPE_THRESHOLD) {
+        translateX.value = withTiming(400, { duration: 180 }, () => {
+          runOnJS(onArchive)();
+          translateX.value = 0;
+        });
+        if (Platform.OS !== "web") runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Heavy);
+      } else if (event.translationX < -SWIPE_THRESHOLD) {
+        translateX.value = withTiming(-400, { duration: 180 }, () => {
+          runOnJS(onSkip)();
+          translateX.value = 0;
+        });
+        if (Platform.OS !== "web") runOnJS(Haptics.notificationAsync)(Haptics.NotificationFeedbackType.Warning);
+      } else {
+        translateX.value = withSpring(0);
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
 
   const todayStr = getTodayStr();
   const isInComeback = !!(habit.comebackUntil && habit.comebackUntil >= todayStr);
@@ -246,10 +235,8 @@ export function HabitCard({
         </Text>
       </View>
 
-      <Animated.View
-        style={{ transform: [{ translateX }], opacity: statusOpacity }}
-        {...panResponder.panHandlers}
-      >
+      <GestureDetector gesture={panGesture}>
+        <ReAnimated.View style={[animatedStyle, { opacity: statusOpacity }]}>
         <TouchableOpacity
           activeOpacity={0.88}
           onPress={onPress}
@@ -435,7 +422,8 @@ export function HabitCard({
             />
           )}
         </TouchableOpacity>
-      </Animated.View>
+        </ReAnimated.View>
+      </GestureDetector>
     </View>
   );
 }

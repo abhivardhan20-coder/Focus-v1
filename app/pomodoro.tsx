@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useHabits, getTodayStr } from "@/context/HabitsContext";
-import { NumericHeatmapChart } from "@/components/NumericHeatmapChart";
+import { NumHeatmap } from "@/components/NumHeatmap";
 
 // ─── SVG viewport ───────────────────────────────────────────────────────────
 const VB_W = 320;
@@ -1037,7 +1037,7 @@ export default function PomodoroScreen() {
 
         {/* 1-year heatmap */}
         {analyticsView === "heat" && (
-          <NumericHeatmapChart
+          <NumHeatmap
             data={heatData}
             maxVal={Math.max(60, ...Object.values(heatData), 1)}
             color={phaseColor}

@@ -21,7 +21,7 @@ import { HeatmapChart } from "./HeatmapChart";
 const { height: H } = Dimensions.get("window");
 const SPARK_DAYS = 30;
 
-interface HabitAnalysisSheetProps {
+interface AnalysisSheetProps {
   visible: boolean;
   onClose: () => void;
   habit: Habit | null;
@@ -55,13 +55,13 @@ function getCalendarWeek(habit: Habit) {
   });
 }
 
-export function HabitAnalysisSheet({
+export function AnalysisSheet({
   visible,
   onClose,
   habit,
   periodLabel = "30 days",
   habitStats,
-}: HabitAnalysisSheetProps) {
+}: AnalysisSheetProps) {
   const colors = useColors();
   const font = useFont();
 

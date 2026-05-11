@@ -6,7 +6,7 @@ import { useColors } from "@/hooks/useColors";
 import { useFont } from "@/hooks/useFont";
 import type { Habit } from "@/context/HabitsContext";
 
-interface DifficultyNudgeCardProps {
+interface NudgeCardProps {
   habit: Habit;
   type: "upgrade" | "downgrade";
   rate: number;
@@ -14,13 +14,13 @@ interface DifficultyNudgeCardProps {
   onDismiss: () => void;
 }
 
-export function DifficultyNudgeCard({
+export function NudgeCard({
   habit,
   type,
   rate,
   onAccept,
   onDismiss,
-}: DifficultyNudgeCardProps) {
+}: NudgeCardProps) {
   const colors = useColors();
   const font = useFont();
 
