@@ -132,7 +132,7 @@ function LiquidProgressBar({
   );
 }
 
-export function HabitCard({
+function HabitCardComponent({
   habit,
   isCompleted,
   isSkipped,
@@ -427,6 +427,28 @@ export function HabitCard({
     </View>
   );
 }
+
+export const HabitCard = React.memo(HabitCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.isCompleted === nextProps.isCompleted &&
+    prevProps.isSkipped === nextProps.isSkipped &&
+    prevProps.currentValue === nextProps.currentValue &&
+    prevProps.readonly === nextProps.readonly &&
+    prevProps.reorderMode === nextProps.reorderMode &&
+    prevProps.habit.id === nextProps.habit.id &&
+    prevProps.habit.streak === nextProps.habit.streak &&
+    prevProps.habit.name === nextProps.habit.name &&
+    prevProps.habit.icon === nextProps.habit.icon &&
+    prevProps.habit.color === nextProps.habit.color &&
+    prevProps.habit.important === nextProps.habit.important &&
+    prevProps.habit.comebackUntil === nextProps.habit.comebackUntil &&
+    prevProps.habit.type === nextProps.habit.type &&
+    prevProps.habit.targetValue === nextProps.habit.targetValue &&
+    prevProps.habit.targetUnit === nextProps.habit.targetUnit &&
+    prevProps.habit.targetDuration === nextProps.habit.targetDuration &&
+    prevProps.habit.difficulty === nextProps.habit.difficulty
+  );
+});
 
 const styles = StyleSheet.create({
   wrapper: { position: "relative", marginBottom: 8 },

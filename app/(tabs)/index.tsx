@@ -72,8 +72,6 @@ export default function HomeScreen() {
     skipHabit,
     archiveHabit,
     updateHabit,
-    getTodayCompletion,
-    getCompletionForDate,
     isHabitDueToday,
     isHabitDueOnDate,
     getTodayProgress,
@@ -212,10 +210,10 @@ export default function HomeScreen() {
     return habits.filter(h => {
       if (h.archived) return false;
       if (!isHabitDueToday(h)) return false;
-      const comp = getTodayCompletion(h);
+      const comp = habitCompletionsMap.get(h.id)?.get(todayStr);
       return !comp?.completed;
     }).length;
-  }, [habits, isToday]);
+  }, [habits, isToday, habitCompletionsMap, todayStr, isHabitDueToday]);
 
   const dueHabits = useMemo(() => {
     const base = isToday
@@ -231,49 +229,61 @@ export default function HomeScreen() {
     });
   }, [habits, isToday, selectedDate, reorderMode]);
 
-  const filteredHabits = useMemo(() => {
-    return dueHabits.filter(h => {
-      const comp = getCompletionForDate(h, selectedDate);
+  const {
+    filteredHabits,
+    pendingHabits,
+    skippedHabits,
+    completedHabits,
+    uniquePendingHabits,
+    uniqueCompletedHabits,
+    uniqueSkippedHabits,
+  } = useMemo(() => {
+    const filtered: Habit[] = [];
+    const pending: Habit[] = [];
+    const skipped: Habit[] = [];
+    const completed: Habit[] = [];
+
+    dueHabits.forEach((h) => {
+      const comp = habitCompletionsMap.get(h.id)?.get(selectedDate);
       const done = isHabitDone(h, comp);
-      if (filter === "pending") return !done;
-      if (filter === "done") return done;
-      return true;
+      const isSkippedStatus = comp !== undefined && !comp.completed && comp.skipReason !== undefined;
+      const isCompletedStatus = comp !== undefined && comp.completed === true && done;
+
+      // filteredHabits logic
+      if (filter === "all") {
+        filtered.push(h);
+      } else if (filter === "pending" && !done) {
+        filtered.push(h);
+      } else if (filter === "done" && done) {
+        filtered.push(h);
+      }
+
+      // pendingHabits logic
+      if (comp === undefined || !done) {
+        pending.push(h);
+      }
+
+      // skippedHabits logic
+      if (isSkippedStatus) {
+        skipped.push(h);
+      }
+
+      // completedHabits logic
+      if (isCompletedStatus) {
+        completed.push(h);
+      }
     });
-  }, [dueHabits, filter, selectedDate, getCompletionForDate, isHabitDone]);
 
-  const pendingHabits = useMemo(() =>
-    dueHabits.filter(h => {
-      const comp = getCompletionForDate(h, selectedDate);
-      return comp === undefined || !isHabitDone(h, comp);
-    }),
-  [dueHabits, selectedDate, getCompletionForDate, isHabitDone]);
-
-  const skippedHabits = useMemo(() =>
-    dueHabits.filter(h => {
-      const comp = getCompletionForDate(h, selectedDate);
-      return comp !== undefined && !comp.completed && comp.skipReason !== undefined;
-    }),
-  [dueHabits, selectedDate, getCompletionForDate, isHabitDone]);
-
-  const completedHabits = useMemo(() =>
-    dueHabits.filter(h => {
-      const comp = getCompletionForDate(h, selectedDate);
-      return comp !== undefined && comp.completed === true && isHabitDone(h, comp);
-    }),
-  [dueHabits, selectedDate, getCompletionForDate, isHabitDone]);
-
-  const uniquePendingHabits = useMemo(
-    () => Array.from(new Map(pendingHabits.map((h) => [h.id, h])).values()),
-    [pendingHabits]
-  );
-  const uniqueCompletedHabits = useMemo(
-    () => Array.from(new Map(completedHabits.map((h) => [h.id, h])).values()),
-    [completedHabits]
-  );
-  const uniqueSkippedHabits = useMemo(
-    () => Array.from(new Map(skippedHabits.map((h) => [h.id, h])).values()),
-    [skippedHabits]
-  );
+    return {
+      filteredHabits: filtered,
+      pendingHabits: pending,
+      skippedHabits: skipped,
+      completedHabits: completed,
+      uniquePendingHabits: Array.from(new Map(pending.map((h) => [h.id, h])).values()),
+      uniqueCompletedHabits: Array.from(new Map(completed.map((h) => [h.id, h])).values()),
+      uniqueSkippedHabits: Array.from(new Map(skipped.map((h) => [h.id, h])).values()),
+    };
+  }, [dueHabits, filter, selectedDate, habitCompletionsMap, isHabitDone]);
 
   const weeklyStats = useMemo(() => {
     let totalDue = 0, totalDone = 0;
@@ -328,16 +338,24 @@ export default function HomeScreen() {
     if (!isToday) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    // Pre-calculate last 30 days info to avoid repeated Date creation in habit loop
+    const last30Days = Array.from({ length: 30 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      return {
+        ds: d.toISOString().split("T")[0],
+        dow: d.getDay(),
+      };
+    });
+
     return habits
       .filter(h => !h.archived && !dismissedNudges.includes(h.id))
       .map(h => {
         let due = 0, done = 0;
         const comps = habitCompletionsMap.get(h.id);
-        for (let i = 0; i < 30; i++) {
-          const d = new Date(today);
-          d.setDate(today.getDate() - i);
-          const ds = d.toISOString().split("T")[0];
-          const dow = d.getDay();
+
+        last30Days.forEach(({ ds, dow }) => {
           let isDue = false;
           if (h.frequency === "daily") isDue = true;
           else if (h.frequency === "weekdays") isDue = dow >= 1 && dow <= 5;
@@ -348,7 +366,8 @@ export default function HomeScreen() {
             due++;
             if (comps?.get(ds)?.completed) done++;
           }
-        }
+        });
+
         if (due < 14) return null;
         const rate = done / due;
         if (rate >= 0.95 && h.difficulty === "medium") return { habit: h, type: "upgrade" as const, rate };
@@ -459,7 +478,8 @@ export default function HomeScreen() {
   const handleComplete = useCallback((habit: Habit) => {
     if (!isToday) return;
     if (habit.type === "quantitative") return;
-    if (getTodayCompletion(habit)?.completed) {
+    const comp = habitCompletionsMap.get(habit.id)?.get(todayStr);
+    if (comp?.completed) {
       if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       uncompleteHabit(habit.id);
     } else {
@@ -470,11 +490,11 @@ export default function HomeScreen() {
           : undefined;
       completeHabit(habit.id, undefined, duration);
     }
-  }, [completeHabit, uncompleteHabit, getTodayCompletion, isToday]);
+  }, [completeHabit, uncompleteHabit, habitCompletionsMap, todayStr, isToday]);
 
   const handleIncrement = useCallback((habit: Habit) => {
     if (!isToday) return;
-    const comp = getTodayCompletion(habit);
+    const comp = habitCompletionsMap.get(habit.id)?.get(todayStr);
     const newValue = (comp?.value ?? 0) + 1;
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const nextCompleted =
@@ -509,7 +529,7 @@ export default function HomeScreen() {
             },
           ],
     });
-  }, [completeHabit, getTodayCompletion, isToday, selectedDate, updateHabit]);
+  }, [completeHabit, habitCompletionsMap, todayStr, isToday, selectedDate, updateHabit]);
 
   const handleSkip = useCallback((habit: Habit) => {
     if (!isToday) return;
@@ -1010,7 +1030,7 @@ export default function HomeScreen() {
                 reorderMode={reorderMode}
                 onReorder={handleReorder}
                 renderCard={(habit, isInReorderMode) => {
-                  const comp = getCompletionForDate(habit, selectedDate);
+                  const comp = habitCompletionsMap.get(habit.id)?.get(selectedDate);
                   return (
                     <HabitCard
                       key={habit.id}
@@ -1049,7 +1069,7 @@ export default function HomeScreen() {
                       reorderMode={false}
                       onReorder={handleReorder}
                       renderCard={(habit, isInReorderMode) => {
-                        const comp = getCompletionForDate(habit, selectedDate);
+                        const comp = habitCompletionsMap.get(habit.id)?.get(selectedDate);
                         return (
                           <HabitCard
                             key={habit.id}
@@ -1099,7 +1119,7 @@ export default function HomeScreen() {
 
                       {/* Completed habit cards */}
                   {uniqueCompletedHabits.map((habit) => {
-                        const comp = getCompletionForDate(habit, selectedDate);
+                        const comp = habitCompletionsMap.get(habit.id)?.get(selectedDate);
                         return (
                           <View key={habit.id} style={styles.doneCardWrap}>
                             <HabitCard
@@ -1122,7 +1142,7 @@ export default function HomeScreen() {
 
                       {/* Skipped habit cards */}
                   {uniqueSkippedHabits.map((habit) => {
-                        const comp = getCompletionForDate(habit, selectedDate);
+                        const comp = habitCompletionsMap.get(habit.id)?.get(selectedDate);
                         return (
                           <View key={habit.id} style={styles.doneCardWrap}>
                             <HabitCard

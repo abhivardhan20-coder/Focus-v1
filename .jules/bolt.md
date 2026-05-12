@@ -1,0 +1,3 @@
+## 2025-05-14 - [HomeScreen Rendering Optimization]
+**Learning:** React Native lists with many items and complex filtering (like in HomeScreen) suffer when lookups for item status are O(N) instead of O(1). Pre-indexing completions into a Map significantly improves scroll performance and responsiveness. Additionally, heavy loops for background analytics (nudgeRecommendations) should pre-calculate shared date data to avoid repeated heavy Date operations.
+**Action:** Use `habitCompletionsMap` (O(1)) for all status lookups in main lists and consolidate multiple `useMemo` filters into a single pass.
